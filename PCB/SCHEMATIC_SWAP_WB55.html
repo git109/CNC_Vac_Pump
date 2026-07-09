@@ -70,6 +70,25 @@
   <span class="sub">WeMos&nbsp;D1&nbsp;Mini32 (ESP32) &rarr; P-NUCLEO-WB55 on the ST&nbsp;Morpho headers &middot; KiCad&nbsp;10.0.4 &middot; total-beginner steps</span>
 </h1>
 
+<div class="callout ok">
+<p><strong>✅ Already applied.</strong> This swap <strong>has been made</strong> to
+<code>Vac_Pump_Controller.kicad_sch</code> and validated with <code>kicad-cli sch erc</code>
+&mdash; <strong>40 violations, exactly the same set as before the swap (zero new)</strong>.
+Rendered PDF: <code>Vac_Pump_Controller_WB55.pdf</code>.</p>
+<p><strong>How it was done</strong> (differs from the manual method below): the original was
+already fully wired to the MCU, so the <code>WeMos_D1_Mini32</code> symbol was replaced
+<strong>in place</strong> with a <code>P_NUCLEO_WB55</code> symbol of <em>identical pin
+geometry</em>. Every wire, net-label and no-connect stayed attached; only the pin
+<strong>names</strong> (&rarr; <code>PA4/CS</code>&hellip;), pin <strong>numbers</strong>
+(&rarr; <code>CN10-17</code>&hellip;), the symbol value, and the old "ESP32" text notes
+changed. Connectivity is unchanged and correct.</p>
+<p><strong>When you open it in KiCad:</strong> the longer WB55 pin names overlap the wire
+net-labels a little &mdash; nudge them for readability. The 40 pre-existing violations are in
+the AC/relay/power area (isolated <code>AlarmOut</code>/<code>VacPumpOut</code>, <code>PE</code>/<code>Earth</code>,
+bus entries), unrelated to this swap. MISO is kept but marked <code>MISO/nc</code> (write-only panel).
+The steps below are kept <strong>for reference</strong> / to redo by hand.</p>
+</div>
+
 <p><strong>Goal:</strong> replace the ESP32 (<code>WeMos_D1_Mini32</code>) symbol in
 <code>Vac_Pump_Controller.kicad_sch</code> with the STM32 <strong>P-NUCLEO-WB55</strong>,
 wired to its <strong>ST&nbsp;Morpho</strong> headers (CN7&nbsp;/&nbsp;CN10). The peripheral
@@ -234,11 +253,10 @@ Power the GC9A01 from this, never 5&nbsp;V.</li>
 <p><strong>PCB</strong> &mdash; the <code>.kicad_pcb</code> is empty; this is schematic-only. If you ever lay out a
 board, assign footprints to CN7/CN10 first.</p>
 
-<div class="callout">
-<p><strong>Want me to do it instead?</strong> I can edit the <code>.kicad_sch</code> directly and
-<strong>validate with <code>kicad-cli sch erc</code></strong> before handing it back. Trade-off: I can't
-<em>see</em> the result, so placement may be visually messy even when electrically correct. Say the word
-and I'll produce a validated draft for you to open and tidy.</p>
+<div class="callout ok">
+<p><strong>Status: done.</strong> Applied for you via the in-place symbol-clone method, validated with
+<code>kicad-cli sch erc</code> (40 violations, unchanged from baseline) and a rendered-PDF review. Open
+<code>Vac_Pump_Controller.kicad_sch</code> to tidy label placement; nothing electrical needs changing.</p>
 </div>
 
 </div>

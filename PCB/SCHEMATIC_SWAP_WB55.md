@@ -1,5 +1,28 @@
 # KiCad schematic swap kit — WeMos D1 Mini32 → P-NUCLEO-WB55 (ST Morpho)
 
+> ## ✅ Already applied
+> This swap **has been made** to `Vac_Pump_Controller.kicad_sch` and validated with
+> `kicad-cli sch erc` — **40 violations, exactly the same set as before the swap
+> (zero new)**. A rendered PDF is at `Vac_Pump_Controller_WB55.pdf`.
+>
+> **How it was done (differs from the manual method below):** the original schematic
+> was already fully wired to the MCU, so rather than delete + rebuild, the `WeMos_D1_Mini32`
+> symbol was replaced **in place** with a new `P_NUCLEO_WB55` symbol of *identical pin
+> geometry*. Every existing wire, net-label, and no-connect stayed attached untouched;
+> only the pin **names** (→ WB55 functions like `PA4/CS`) and pin **numbers** (→ Morpho
+> refs like `CN10-17`) changed, plus the symbol value and the "ESP32" text notes.
+> Net connectivity is unchanged and correct.
+>
+> **What to check when you open it in KiCad:** the pin labels now overlap the wire
+> net-labels a little (the WB55 pin names are longer than the old `IO27` ones) — nudge
+> them for readability. The 40 pre-existing ERC violations are in the AC/relay/power
+> area (isolated `AlarmOut`/`VacPumpOut` labels, `PE`/`Earth`, bus entries) and are
+> unrelated to this swap. The MISO pin is kept but marked `MISO/nc` (write-only panel).
+>
+> The step-by-step below is kept **for reference** / if you ever want to redo it by hand.
+
+---
+
 **Goal:** replace the ESP32 (`WeMos_D1_Mini32`) symbol in
 `PCB/Vac_Pump_Controller/Vac_Pump_Controller.kicad_sch` with the STM32
 **P-NUCLEO-WB55** dev board, wired to its **ST Morpho** headers (CN7 / CN10) —
@@ -208,9 +231,8 @@ out a real board, assign footprints to CN7/CN10 (and the other parts) first.
 
 ---
 
-## Want me to do it instead?
-I can attempt the edit directly on the `.kicad_sch` text and **validate it with
-`kicad-cli sch erc`** before handing it back (Option A from earlier). The trade-off:
-I can't *see* the result, so wire/label placement may be visually messy even when
-electrically correct. Say the word and I'll produce a validated draft for you to open
-and tidy.
+## Status: done
+This was applied for you (see the banner at the top) using the in-place symbol-clone
+method and validated with `kicad-cli sch erc` (40 violations, unchanged from baseline)
+plus a rendered PDF review. Open `Vac_Pump_Controller.kicad_sch` in KiCad to tidy the
+label placement; nothing electrical needs changing.
