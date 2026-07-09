@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Vacuum Pump Controller — Zephyr Migration</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --border: #d0d7de;
+    --code-bg: #f6f8fa; --accent: #0969da; --th-bg: #f6f8fa;
+    --warn-bg: #fff8c5; --warn-border: #d4a72c; --ok-bg: #dafbe1; --ok-border: #2da44e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --code-bg: #161b22; --accent: #4493f8; --th-bg: #161b22;
+      --warn-bg: #2d2200; --warn-border: #bb8009; --ok-bg: #0f2417; --ok-border: #2ea043;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px 96px; }
+  h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 4px; }
+  h1 .sub { display: block; font-size: 1.05rem; font-weight: 400; color: var(--muted); margin-top: 8px; }
+  h2 { font-size: 1.45rem; margin: 40px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.15rem; margin: 28px 0 10px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em; background: var(--code-bg); padding: 0.15em 0.4em;
+    border-radius: 6px; border: 1px solid var(--border);
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; margin: 14px 0;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: 0.82rem; line-height: 1.5; }
+  .table-scroll { overflow-x: auto; margin: 16px 0; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--th-bg); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  td code, th code { white-space: nowrap; }
+  ul, ol { padding-left: 24px; margin: 10px 0; }
+  li { margin: 5px 0; }
+  blockquote {
+    margin: 14px 0; padding: 2px 16px; color: var(--muted);
+    border-left: 4px solid var(--border);
+  }
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 16px 0; border: 1px solid; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .ok { background: var(--ok-bg); border-color: var(--ok-border); }
+  .badge { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); }
+  .badge.active { background: var(--ok-bg); border-color: var(--ok-border); }
+  .badge.dead { background: var(--warn-bg); border-color: var(--warn-border); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  .meta { color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>CNC Vacuum Pump Controller — Zephyr Migration
+  <span class="sub">Porting the original Arduino firmware to Zephyr RTOS · overview &amp; platform history</span>
+</h1>
+<p class="meta">Board-specific detail lives in each app's own README; this page is the map.</p>
+
+<h2 id="history">Platform history</h2>
+<div class="table-scroll">
+<table>
+<thead><tr><th>Stage</th><th>Platform</th><th>Status</th><th>Location</th></tr></thead>
+<tbody>
+<tr><td>Original</td><td>Arduino / classic ESP32 (WeMos D1 Mini32)</td><td>Reference</td><td><a href="source/Vac_Gauge_V2/">source/Vac_Gauge_V2/</a></td></tr>
+<tr><td>Attempt 1</td><td>ESP32-S3 (Lonely Binary N16R8) + Zephyr</td><td><span class="badge dead">Abandoned</span> — board quality / hardware failure during bring-up</td><td><a href="zephyr/">zephyr/</a> (archived)</td></tr>
+<tr><td><strong>Current</strong></td><td><strong>STM32WB55 (P-NUCLEO-WB55, MB1355)</strong> + Zephyr</td><td><span class="badge active">Active</span></td><td><a href="stm32/zephyrwb/">stm32/zephyrwb/</a></td></tr>
+</tbody>
+</table>
+</div>
+<div class="callout warn">
+<p><strong>Why the switch:</strong> the ESP32-S3 bring-up hit repeated hardware issues (native-USB flashing quirks, and finally a board that stopped enumerating entirely after the LCD was connected). The STM32WB55 Nucleo is a cleaner target — onboard ST-LINK (one cable for flash + console), real onboard LEDs, and no pin traps. The ESP32-S3 app is kept for reference but is not maintained.</p>
+</div>
+
+<h2 id="carried">What carried over unchanged</h2>
+<p>The port is mostly board-agnostic C; only the devicetree/board glue differs per target:</p>
+<ul>
+<li><strong>Business logic</strong> — <code>vac_filter.c</code> (median+average filter, with the original's ring-buffer out-of-bounds bug fixed) and <code>encoder.c</code> (the two-"bug" setpoint logic) are identical across both ports.</li>
+<li><strong>Control structure</strong> — Arduino <code>setup()/loop()</code> → a <code>k_timer</code>+workqueue 10 ms control loop plus the LVGL handler loop. <code>millis()</code> → <code>k_uptime_get_32()</code>; <code>xTaskCreate</code> → <code>k_thread</code>; <code>analogRead</code> → the Zephyr ADC API; <code>pinMode/digitalWrite</code> → <code>gpio_dt_spec</code>.</li>
+<li><strong>Display</strong> — GC9A01 over the <code>zephyr,mipi-dbi-spi</code> + <code>galaxycore,gc9x01x</code> binding (<code>display-inversion</code> on, RGB565). The hand-written TFT_eSPI <code>my_disp_flush</code> is gone — Zephyr's display driver + LVGL module own it.</li>
+</ul>
+
+<h2 id="lvgl">The one cross-cutting decision: LVGL version</h2>
+<div class="callout warn">
+<p>The workspace ships <strong>LVGL 9.5</strong>; the SquareLine export in <code>source/Vac_Gauge_V2/src/ui_lvgl/</code> is <strong>LVGL 8.3.11</strong> and will <strong>not</strong> compile against 9.x (renamed APIs: <code>lv_disp_drv_*</code> → <code>lv_display_*</code>, <code>lv_img_set_angle</code> → <code>lv_image_set_rotation</code>, etc.).</p>
+</div>
+<p>Both ports therefore ship a small <strong>placeholder LVGL 9 UI</strong> and defer the real UI to a <strong>re-export from SquareLine targeting LVGL 9</strong> (open <code>source/SquareLine_VacDisp/Sm_Disp.spj</code>, set the export target to LVGL 9, regenerate into the app's <code>src/ui/</code>). <code>lv_conf.h</code> is discarded — Zephyr configures LVGL via <code>CONFIG_LV_*</code>.</p>
+
+<h2 id="active">Active target: STM32WB55</h2>
+<p>See <a href="stm32/zephyrwb/README.md">stm32/zephyrwb/README.md</a>. Build and flash over the single ST-LINK cable:</p>
+<pre><code>cd /Users/robert/Documents/dev-env/zephyresp32s3
+source .venv/bin/activate
+west build -b nucleo_wb55rg /Users/robert/Documents/shop-dev/shop-tools/CNC_Vac_Pump/stm32/zephyrwb
+west flash</code></pre>
+<p>Highlights vs. the ESP32-S3 attempt:</p>
+<ul>
+<li><strong>One USB cable</strong> = flash (ST-LINK/SWD) + console (USART1 VCP). No download-mode dance.</li>
+<li><strong>Onboard green LED (LD2)</strong> is the heartbeat — no WS2812 driver needed.</li>
+<li><strong>No pin traps</strong> — wiring goes to the <strong>ST Morpho</strong> headers (CN7/CN10). Full pin map and Morpho cautions in the app README / <a href="stm32/zephyrwb/WIRING.html">WIRING.html</a>.</li>
+</ul>
+<div class="callout ok">
+<p>Verified: configures + compiles + links clean (FLASH ~33%, RAM ~39% of 192 KB).</p>
+</div>
+<p>KiCad schematic still shows the original WeMos/ESP32. Beginner swap kit to move it to the WB55: <a href="PCB/SCHEMATIC_SWAP_WB55.html">PCB/SCHEMATIC_SWAP_WB55.html</a>. Named-net design means only the MCU symbol changes.</p>
+
+<h2 id="archived">Archived target: ESP32-S3</h2>
+<p>See <a href="zephyr/README.md">zephyr/README.md</a>. Kept for reference only. Notable ESP32-S3 lessons captured there, in case the platform is ever revisited:</p>
+<ul>
+<li>GPIO22–25 don't exist; GPIO26–37 are the flash/PSRAM bus on WROOM/N-R8 modules.</li>
+<li>GPIO19/20 are the native-USB D-/D+ lines — a display MISO there kills USB.</li>
+<li>Console-over-USB-Serial-JTAG and the BOOT/RESET download-mode dance.</li>
+<li>Onboard RGB LED is a WS2812 (GPIO48), needing the <code>ws2812-spi</code> driver.</li>
+</ul>
+
+<h2 id="env">Shared build environment</h2>
+<ul>
+<li>Zephyr workspace: <code>~/Documents/dev-env/zephyresp32s3</code> (Zephyr <strong>4.4.99</strong>, LVGL <strong>9.5.0</strong>). <strong>Do not <code>west init</code></strong> again — build the freestanding apps from inside it.</li>
+<li>Host tools: <code>cmake</code>, <code>ninja</code>, <code>dtc</code> (<code>brew install cmake ninja dtc</code>).</li>
+<li>Devicetree overlays auto-apply when named after the board target (<code>nucleo_wb55rg.overlay</code>, <code>esp32s3_devkitc_esp32s3_procpu.overlay</code>).</li>
+</ul>
+
+</div>
+</body>
+</html>

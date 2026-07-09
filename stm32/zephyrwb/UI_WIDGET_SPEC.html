@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SquareLine UI — per-widget rebuild spec (LVGL 9, SLS 1.6.1)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --border: #d0d7de;
+    --code-bg: #f6f8fa; --accent: #0969da; --th-bg: #f6f8fa;
+    --warn-bg: #fff8c5; --warn-border: #d4a72c; --ok-bg: #dafbe1; --ok-border: #2da44e;
+    --props: #8250df; --transform: #0969da; --style: #bf8700;
+    --card: #f6f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --code-bg: #161b22; --accent: #4493f8; --th-bg: #161b22;
+      --warn-bg: #2d2200; --warn-border: #bb8009; --ok-bg: #0f2417; --ok-border: #2ea043;
+      --props: #a371f7; --transform: #4493f8; --style: #e3b341;
+      --card: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
+  h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 4px; }
+  h1 .sub { display: block; font-size: 1rem; font-weight: 400; color: var(--muted); margin-top: 8px; }
+  h2 { font-size: 1.3rem; margin: 34px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.08rem; margin: 22px 0 6px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85em; background: var(--code-bg); padding: 0.12em 0.4em;
+    border-radius: 6px; border: 1px solid var(--border);
+  }
+  .table-scroll { overflow-x: auto; margin: 14px 0; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--th-bg); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 5px 0; }
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 16px 0; border: 1px solid; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .ok { background: var(--ok-bg); border-color: var(--ok-border); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 30px 0; }
+  .meta { color: var(--muted); font-size: 0.9rem; }
+  /* Section tags */
+  .tag {
+    display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: .02em;
+    padding: 1px 7px; border-radius: 999px; border: 1px solid; margin-right: 6px;
+    vertical-align: 1px; white-space: nowrap;
+  }
+  .tag.props { color: var(--props); border-color: var(--props); }
+  .tag.transform { color: var(--transform); border-color: var(--transform); }
+  .tag.style { color: var(--style); border-color: var(--style); }
+  .tag.flags { color: var(--muted); border-color: var(--border); }
+  /* Widget cards */
+  .w { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin: 14px 0; }
+  .w h3 { margin-top: 0; }
+  .w .note { color: var(--muted); font-weight: 400; font-size: 0.92rem; }
+  .w ul { margin: 6px 0; }
+  b.k { font-weight: 700; }
+  .swatch { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 3px; border: 1px solid var(--border); vertical-align: -1px; margin-right: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>SquareLine UI — per-widget rebuild spec
+  <span class="sub">For the LVGL-9 fresh project · SquareLine Studio 1.6.1</span>
+</h1>
+<p class="meta">Values pulled from the existing project (<code>source/Vac_Gauge_V2/src/ui_lvgl/ui_Screen1.c</code> + <code>Sm_Disp.spj</code>). Recreate the widgets in this order (top → bottom = back → front z-order) and keep the <strong>names exact</strong>.</p>
+
+<h2>How the SLS 1.6.1 Inspector is laid out</h2>
+<p>A selected widget's Inspector has these sections. Each value below is tagged with where it goes:</p>
+<ul>
+<li><span class="tag props">PROPS</span><em>Widget Properties</em> (top): the <strong>Name</strong> + widget-specific fields — Image: <strong>Asset, Rotation, Pivot X/Y, Scale</strong>; Label: <strong>Text</strong>.</li>
+<li><span class="tag transform">TRANSFORM</span><strong>X, Y, Width, Height, Align</strong> (position/size; X/Y in px).</li>
+<li><span class="tag style">STYLE</span><em>Style Settings</em> (bottom): add a local style to a <strong>Part</strong> (Main / Indicator), then set <strong>Background color, Radius, Text</strong> (font/color/spacing).</li>
+</ul>
+<div class="callout ok">
+<p>Every widget uses <strong>Align = CENTER</strong>, so the Transform <strong>X/Y are offsets from screen center</strong> (negative Y = up, negative X = left). "Size = content" → leave Width/Height on <strong>content</strong> so the image keeps its PNG size.</p>
+</div>
+
+<h2>Widgets (create in this order)</h2>
+
+<div class="w">
+<h3>Screen: <code>Screen1</code></h3>
+<ul>
+<li><span class="tag style">STYLE</span>Main part → Background <b class="k">color <span class="swatch" style="background:#000000"></span>#000000</b> (black), opacity 255.</li>
+</ul>
+</div>
+
+<div class="w">
+<h3>1. <code>GaugeFace</code> — Image</h3>
+<ul>
+<li><span class="tag props">PROPS</span>Asset = <code>Small_Gauge_Scale.png</code></li>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">0</b>, Y <b class="k">-6</b>, size <b class="k">content</b></li>
+</ul>
+</div>
+
+<div class="w">
+<h3>2. <code>Spinner1</code> — Spinner <span class="note">(decorative — firmware never drives it; optional)</span></h3>
+<ul>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">20</b>, Y <b class="k">49</b>, Width <b class="k">30</b>, Height <b class="k">30</b></li>
+<li><span class="tag style">STYLE</span><strong>Main</strong> part → Arc → <b class="k">Width 5</b>; <strong>Indicator</strong> part → Arc → <b class="k">Width 5</b></li>
+<li><span class="tag flags">FLAGS</span>Clickable <b class="k">off</b></li>
+</ul>
+<div class="callout warn">
+<p><strong>No Time/Angle fields in SLS 1.6.1.</strong> LVGL 9 moved the spin time/arc out of the spinner constructor, so SquareLine no longer exposes them — the animation runs at its built-in defaults. Place the widget and move on. You can even skip it entirely; nothing in the firmware references it.</p>
+</div>
+</div>
+
+<div class="w">
+<h3>3. <code>ledDarkImage</code> — Image</h3>
+<ul>
+<li><span class="tag props">PROPS</span>Asset = <code>Dark_LED.png</code></li>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">42</b>, Y <b class="k">5</b>, size <b class="k">content</b></li>
+</ul>
+</div>
+
+<div class="w">
+<h3>4. <code>ledRedImage</code> — Image <span class="note">(create AFTER ledDarkImage so it stacks on top)</span></h3>
+<ul>
+<li><span class="tag props">PROPS</span>Asset = <code>Red_LED.png</code></li>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">42</b>, Y <b class="k">5</b>, size <b class="k">content</b></li>
+</ul>
+</div>
+
+<div class="w">
+<h3>5. <code>Needle</code> — Image</h3>
+<ul>
+<li><span class="tag props">PROPS</span>Asset = <code>Small_Gauge_Needle.png</code>; <b class="k">Rotation 0</b>; <b class="k">Pivot X 78 / Pivot Y 15</b></li>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">-32</b>, Y <b class="k">35</b>, size <b class="k">content</b></li>
+</ul>
+</div>
+
+<div class="w">
+<h3>6. <code>vacLabel</code> — Label</h3>
+<ul>
+<li><span class="tag props">PROPS</span>Text = <code>30.0</code></li>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">0</b>, Y <b class="k">-24</b>, size <b class="k">content</b></li>
+<li><span class="tag style">STYLE</span>Main part:
+  <ul>
+  <li>Text → <b class="k">Font <code>courierBold</code></b>, <b class="k">Color <span class="swatch" style="background:#BEDBBE"></span>#BEDBBE</b>, <b class="k">Letter space -2</b>, Line space 0</li>
+  <li>Background → <b class="k">Color <span class="swatch" style="background:#454545"></span>#454545</b>, opacity 255</li>
+  <li><b class="k">Radius 5</b></li>
+  </ul>
+</li>
+</ul>
+</div>
+
+<div class="w">
+<h3>7. <code>redBugImg</code> — Image</h3>
+<ul>
+<li><span class="tag props">PROPS</span>Asset = <code>red_bug_.png</code> <span class="note">(trailing underscore)</span>; <b class="k">Rotation -45.0</b> (°); <b class="k">Pivot X 8 / Pivot Y 119</b></li>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">0</b>, Y <b class="k">-107</b>, size <b class="k">content</b></li>
+</ul>
+</div>
+
+<div class="w">
+<h3>8. <code>grnBugImg</code> — Image</h3>
+<ul>
+<li><span class="tag props">PROPS</span>Asset = <code>grn_bug_.png</code> <span class="note">(trailing underscore)</span>; <b class="k">Rotation -90.0</b> (°); <b class="k">Pivot X 8 / Pivot Y 119</b></li>
+<li><span class="tag transform">TRANSFORM</span>Align <b class="k">CENTER</b>, X <b class="k">0</b>, Y <b class="k">-107</b>, size <b class="k">content</b></li>
+</ul>
+</div>
+
+<h2>Font: <code>courierBold</code> — two steps</h2>
+<div class="callout warn">
+<p><strong>Copying the TTF into Assets is not enough</strong> — it only makes it a <em>source</em>. You must then <strong>generate</strong> the font in the Font Manager, or it won't appear in the label's Font dropdown (you'll only see the built-in Montserrat sizes).</p>
+</div>
+<ol>
+<li><strong>Add the source:</strong> drop <code>Courier_BOLD.ttf</code> into the project's <code>assets/</code> (Assets → Fonts). Makes it selectable in the Font Manager; does not create a usable font yet.</li>
+<li><strong>Generate it:</strong> open <strong>Panels → Font Manager → Create New Font</strong> with:</li>
+</ol>
+<div class="table-scroll">
+<table>
+<thead><tr><th>Field</th><th>Value</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Font Name</td><td><code>courierBold</code></td><td></td></tr>
+<tr><td>Select Font Asset</td><td><code>Courier_BOLD.ttf</code></td><td>from the dropdown</td></tr>
+<tr><td>Font Size</td><td><strong>30</strong></td><td></td></tr>
+<tr><td><strong>Bpp</strong></td><td><strong>4</strong></td><td>⚠️ original was <strong>8 bpp</strong> — LVGL 9 rejects 8-bpp; 8 also blocks generation</td></tr>
+<tr><td>Range</td><td><code>0x20-0x7F</code></td><td>ASCII printable</td></tr>
+</tbody>
+</table>
+</div>
+<ol start="3">
+<li>Click <strong>Create Font</strong> → it appears under <strong>Created Fonts</strong>.</li>
+<li>Assign it: <strong>vacLabel → <span class="tag style">STYLE</span> → Text → Font → <code>courierBold</code></strong>.</li>
+</ol>
+
+<h2>Images to import</h2>
+<p><strong>Assets → Images → Add</strong>, from <code>source/SquareLine_VacDisp/assets/</code>. Use exactly these 6; ignore the near-duplicates (<code>Red_Bug.png</code>, <code>Small_Gauge_Needle copy.png</code>, the <code>*_.png</code> scale variant, <code>Red_Bug-17X26.png</code>):</p>
+<div class="table-scroll">
+<table>
+<thead><tr><th>Widget</th><th>PNG</th></tr></thead>
+<tbody>
+<tr><td>GaugeFace</td><td><code>Small_Gauge_Scale.png</code></td></tr>
+<tr><td>ledDarkImage</td><td><code>Dark_LED.png</code></td></tr>
+<tr><td>ledRedImage</td><td><code>Red_LED.png</code></td></tr>
+<tr><td>Needle</td><td><code>Small_Gauge_Needle.png</code></td></tr>
+<tr><td>redBugImg</td><td><code>red_bug_.png</code></td></tr>
+<tr><td>grnBugImg</td><td><code>grn_bug_.png</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<hr>
+<h2>Notes</h2>
+<ul>
+<li><strong>Rotation units:</strong> SLS shows degrees with one decimal (<code>-45.0</code>) — matches the old code's 0.1° integer (<code>-450</code>). Enter the degree value.</li>
+<li><strong>Pivot</strong> only matters on rotating images (<code>Needle</code>, <code>redBugImg</code>, <code>grnBugImg</code>); leave it default on the rest.</li>
+<li>The firmware drives, at runtime: <code>vacLabel</code> text, <code>Needle</code> rotation, <code>redBugImg</code> / <code>grnBugImg</code> rotation, and <code>ledRedImage</code> show/hide — all by the exact names above; the values here are just the starting layout.</li>
+</ul>
+<div class="callout ok">
+<p>Once exported to <code>stm32/zephyrwb/src/ui/</code>, ping me and I'll wire <code>ui_init()</code> + those runtime calls into <code>main.c</code> for LVGL 9.</p>
+</div>
+
+</div>
+</body>
+</html>

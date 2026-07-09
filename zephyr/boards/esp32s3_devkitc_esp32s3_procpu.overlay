@@ -1,0 +1,169 @@
+/*
+ * CNC Vacuum Pump Controller — ESP32-S3 board overlay
+ *
+ * Pin choices avoid the two ESP32-S3 traps that kill the original classic-ESP32
+ * wiring:
+ *   - GPIO22..25 DO NOT EXIST on the S3  (originally MOSI=23, encoder-B=25)
+ *   - GPIO26..37 are the in-package flash/PSRAM bus on WROOM-1 modules
+ *     (originally pump=26, encoder-A=32, encoder-SW=27)
+ * See zephyr/README.md for the full classic -> S3 pin remap table.
+ *
+ * Display node models the in-tree waveshare/esp32s3_touch_lcd_1_28 board, which
+ * uses the SAME GC9A01 panel over the MIPI-DBI-SPI abstraction.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/display/panel.h>
+#include <zephyr/dt-bindings/led/led.h>
+#include <zephyr/dt-bindings/pinctrl/esp32s3-pinctrl.h>
+
+/ {
+	aliases {
+		vac-pump  = &pump_relay;
+		vac-alarm = &alarm_relay;
+		debug-led = &debug_led;
+		lcd-bl    = &lcd_backlight;
+		led-strip = &led_strip;
+	};
+
+	chosen {
+		zephyr,display = &gc9a01;
+		/* Console on the built-in USB-Serial-JTAG so ONE native-USB cable
+		 * (/dev/cu.usbmodemXXXX) carries `west flash`, `west espressif monitor`,
+		 * and the console. Delete these two lines to use the DevKitC "UART" port
+		 * (CP2102 -> UART0) instead. */
+		zephyr,console = &usb_serial;
+		zephyr,shell-uart = &usb_serial;
+	};
+
+	/* Relays are active-low (matches enum relayType{ On=0, Off=1 }). */
+	relays {
+		compatible = "gpio-leds";
+		pump_relay:  pump  { gpios = <&gpio0 6 GPIO_ACTIVE_LOW>; };   /* was GPIO26 */
+		alarm_relay: alarm { gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; };   /* was GPIO21 (clashed w/ BL) */
+	};
+
+	indicators {
+		compatible = "gpio-leds";
+		debug_led:     dbg { gpios = <&gpio0 2  GPIO_ACTIVE_HIGH>; };
+		lcd_backlight: bl  { gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>; };
+	};
+
+	/* Rotary encoder + ADC channel handle for the app (polled in encoder.c). */
+	zephyr,user {
+		io-channels  = <&adc0 3>;                             /* GPIO4 = ADC1_CH3 */
+		enc-a-gpios  = <&gpio1 8  GPIO_PULL_UP>;              /* GPIO40, was 32 */
+		enc-b-gpios  = <&gpio1 9  GPIO_PULL_UP>;              /* GPIO41, was 25 */
+		enc-sw-gpios = <&gpio1 10 GPIO_PULL_UP>;             /* GPIO42, was 27 */
+	};
+
+	/* GC9A01 1.28" round LCD over MIPI-DBI-SPI */
+	mipi_dbi {
+		compatible = "zephyr,mipi-dbi-spi";
+		spi-dev = <&spi2>;
+		dc-gpios    = <&gpio0 17 GPIO_ACTIVE_HIGH>;          /* DC  */
+		reset-gpios = <&gpio0 16 GPIO_ACTIVE_LOW>;           /* RST */
+		write-only;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gc9a01: gc9a01@0 {
+			status = "okay";
+			compatible = "galaxycore,gc9x01x";
+			reg = <0>;
+			mipi-max-frequency = <40000000>;
+			pixel-format = <PANEL_PIXEL_FORMAT_RGB_565>;
+			display-inversion;                               /* GC9A01 needs inversion ON */
+			width = <240>;
+			height = <240>;
+		};
+	};
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+/* Built-in USB-Serial-JTAG (native USB port), used for the console above. */
+&usb_serial {
+	status = "okay";
+};
+
+/* SPI bus for the panel: SCLK=18, MOSI=11, CS=5.
+ * NO MISO: the display is write-only, and GPIO19 (the old MISO pin) is USB_D-
+ * on this board — claiming it for SPI would kill the native-USB console. */
+&pinctrl {
+	spim2_default: spim2_default {
+		group1 {
+			pinmux = <SPIM2_SCLK_GPIO18>, <SPIM2_CSEL_GPIO5>;
+		};
+		group2 {
+			pinmux = <SPIM2_MOSI_GPIO11>;
+			output-low;
+		};
+	};
+};
+
+&spi2 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-0 = <&spim2_default>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
+};
+
+/* Onboard RGB LED (WS2812) on GPIO48, driven via SPI3 (ws2812-spi backend).
+ * GPIO38 is a dummy SCLK the WS2812 ignores; only MOSI (GPIO48) carries data. */
+&pinctrl {
+	spim3_default: spim3_default {
+		group1 {
+			pinmux = <SPIM3_SCLK_GPIO38>;
+		};
+		group2 {
+			pinmux = <SPIM3_MOSI_GPIO48>;
+			output-low;
+		};
+	};
+};
+
+&spi3 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-0 = <&spim3_default>;
+	pinctrl-names = "default";
+	line-idle-low;                        /* required by the WS2812 SPI driver */
+
+	led_strip: ws2812@0 {
+		compatible = "worldsemi,ws2812-spi";
+		reg = <0>;
+		spi-max-frequency = <6400000>;
+		chain-length = <1>;
+		spi-cpha;
+		spi-one-frame = <0xf0>;           /* 625 ns high / 625 ns low  -> '1' */
+		spi-zero-frame = <0xc0>;          /* 312 ns high / 937 ns low  -> '0' */
+		color-mapping = <LED_COLOR_ID_GREEN LED_COLOR_ID_RED LED_COLOR_ID_BLUE>;
+	};
+};
+
+/* This module is N16R8: 16 MB flash. */
+&flash0 {
+	reg = <0x0 DT_SIZE_M(16)>;
+};
+
+/* Vacuum sensor on ADC1 channel 3 (GPIO4). 12-bit, ~0..3.0V after divider. */
+&adc0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@3 {
+		reg = <3>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
+};

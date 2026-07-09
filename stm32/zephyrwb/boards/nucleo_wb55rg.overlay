@@ -1,0 +1,109 @@
+/*
+ * CNC Vacuum Pump Controller — P-NUCLEO-WB55 (nucleo_wb55rg) board overlay.
+ *
+ * Wiring goes to the ST Morpho headers (CN7 / CN10). Nothing in this overlay
+ * (or the firmware) is header-specific: the Morpho and Arduino headers bring
+ * out the SAME MCU pins, so devicetree references the MCU port/pin (e.g. gpioa
+ * 5 = PA5) and is identical either way. Comments below give the Morpho
+ * connector-pin next to the MCU pin for the physical wiring; see WIRING.html.
+ *
+ * Unlike the ESP32-S3, the STM32WB55 has no pin traps — the only pins to avoid
+ * are those the board already claims:
+ *   PB6/PB7  = USART1 console (ST-LINK VCP)   [CN10-34 / CN7-... , leave alone]
+ *   PC0/PC1  = LPUART1 (BLE co-processor)
+ *   PB8/PB9  = I2C1
+ *   PA11/12  = USB
+ *   PA4..PA7 = SPI1 (our display bus)
+ *   PA13/PA14 = SWD, NRST, PH3/BOOT0          (Morpho-only; touching these
+ *               breaks flashing — the Arduino header hid them)
+ *
+ * Console + flashing both go over the single ST-LINK USB cable — no overlay
+ * changes needed for that (board default zephyr,console = &usart1).
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/display/panel.h>
+
+/ {
+	aliases {
+		vac-pump  = &pump_relay;
+		vac-alarm = &alarm_relay;
+		lcd-bl    = &lcd_backlight;
+		/* Heartbeat uses the onboard green LED (board alias led1 = green_led_2). */
+	};
+
+	chosen {
+		zephyr,display = &gc9a01;
+	};
+
+	/* Relays are active-low (matches enum relayType{ On=0, Off=1 }). */
+	relays {
+		compatible = "gpio-leds";
+		pump_relay:  pump  { gpios = <&gpioc 3 GPIO_ACTIVE_LOW>; };   /* CN7-36 (A4) = PC3 */
+		alarm_relay: alarm { gpios = <&gpioc 2 GPIO_ACTIVE_LOW>; };   /* CN7-38 (A5) = PC2 */
+	};
+
+	backlight {
+		compatible = "gpio-leds";
+		lcd_backlight: bl { gpios = <&gpioa 1 GPIO_ACTIVE_HIGH>; };   /* CN7-32 (A2) = PA1 */
+	};
+
+	/* Rotary encoder + ADC channel handle for the app (polled in encoder.c). */
+	zephyr,user {
+		io-channels  = <&adc1 5>;                          /* CN7-34 (A3) = PA0 = ADC1_IN5 */
+		enc-a-gpios  = <&gpioc 6  GPIO_PULL_UP>;           /* CN10-33 (D2) = PC6  */
+		enc-b-gpios  = <&gpioa 10 GPIO_PULL_UP>;           /* CN10-31 (D3) = PA10 */
+		enc-sw-gpios = <&gpioc 10 GPIO_PULL_UP>;           /* CN10-29 (D4) = PC10 */
+	};
+
+	/* GC9A01 1.28" round LCD over MIPI-DBI-SPI on the Arduino SPI header. */
+	mipi_dbi {
+		compatible = "zephyr,mipi-dbi-spi";
+		spi-dev = <&spi1>;
+		dc-gpios    = <&gpioa 9  GPIO_ACTIVE_HIGH>;        /* CN10-19 (D9) = PA9  */
+		reset-gpios = <&gpioc 12 GPIO_ACTIVE_LOW>;         /* CN10-21 (D8) = PC12 */
+		write-only;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gc9a01: gc9a01@0 {
+			status = "okay";
+			compatible = "galaxycore,gc9x01x";
+			reg = <0>;
+			mipi-max-frequency = <16000000>;              /* SPI1 = PCLK2/2 = 16 MHz */
+			pixel-format = <PANEL_PIXEL_FORMAT_RGB_565>;
+			display-inversion;                            /* GC9A01 needs inversion ON */
+			width = <240>;
+			height = <240>;
+		};
+	};
+};
+
+/* Display SPI bus: SCK=PA5 (CN10-11/D13), MOSI=PA7 (CN10-15/D11),
+ * CS=PA4 (CN10-17/D10) as a GPIO.
+ * Drop HW-NSS (PA4) and MISO (PA6): write-only panel, CS via cs-gpios. */
+&spi1 {
+	pinctrl-0 = <&spi1_sck_pa5 &spi1_mosi_pa7>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpioa 4 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+/* Vacuum sensor on ADC1_IN5 (PA0 = CN7-34 / A3). Board already pinctrls PA0.
+ * Front-end (external): MPXV4115V (5 V supply) -> R1 5k / R2 10k divider ->
+ * ~0.13..3.07 V into this pin (safely inside the 3.3 V VREF+ full scale).
+ * The divider's ~3.3 kOhm source impedance wants a long sample time, so use
+ * 47.5 ADC cycles (plenty for a slow-moving vacuum signal). */
+&adc1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@5 {
+		reg = <5>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_TICKS, 47)>;
+		zephyr,resolution = <12>;
+	};
+};

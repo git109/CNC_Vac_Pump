@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Vac Pump — WB55 Wiring</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --border: #d0d7de;
+    --code-bg: #f6f8fa; --th-bg: #f6f8fa; --accent: #0969da;
+    --warn-bg: #fff8c5; --warn-border: #d4a72c;
+    --lcd-bg: #eef4fb; --lcd-border: #9ac0ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --code-bg: #161b22; --th-bg: #161b22; --accent: #4493f8;
+      --warn-bg: #2d2200; --warn-border: #bb8009;
+      --lcd-bg: #10233b; --lcd-border: #1f4b7a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.55;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  h1 .sub { display:block; font-size: 0.98rem; font-weight: 400; color: var(--muted); margin-top: 6px; }
+  h2 { font-size: 1.15rem; margin: 30px 0 10px; }
+  p { margin: 10px 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em;
+    background: var(--code-bg); padding: 0.12em 0.4em; border-radius: 6px; border: 1px solid var(--border); }
+  .table-scroll { overflow-x: auto; margin: 14px 0; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+  th, td { text-align: left; padding: 9px 13px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { background: var(--th-bg); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  tr.lcd td { background: var(--lcd-bg); }
+  tr.lcd td:first-child { border-left: 3px solid var(--lcd-border); }
+  .silk { font-weight: 700; font-family: ui-monospace, monospace; }
+  .dash { color: var(--muted); }
+  .wire { display: inline-flex; align-items: center; gap: 7px; }
+  .sw { width: 15px; height: 15px; border-radius: 4px; border: 1px solid rgba(128,128,128,.55); flex: none; }
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 18px 0; border: 1px solid var(--warn-border); background: var(--warn-bg); }
+  .callout p { margin: 6px 0; }
+  ul { padding-left: 22px; } li { margin: 5px 0; }
+  .legend { color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>CNC Vacuum Pump Controller — Wiring
+  <span class="sub">P-NUCLEO-WB55 (<code>nucleo_wb55rg</code>) · ST Morpho headers (CN7/CN10) · GC9A01 round LCD</span>
+</h1>
+<p class="legend"><strong>Silk</strong> = label printed on the GC9A01 module &middot; <strong>Morpho</strong> = CN7/CN10 connector-pin to land the wire on &middot; <strong>STM32</strong> = MCU port &middot; <strong>(Arduino)</strong> = same MCU pin's Arduino-header alias, for cross-reference &middot; <strong>Wire</strong> = JXI pigtail color. LCD rows are shaded.</p>
+
+<div class="table-scroll">
+<table>
+<thead>
+<tr><th>Function</th><th>Silk</th><th>Morpho</th><th>STM32</th><th>Arduino</th><th>Wire</th></tr>
+</thead>
+<tbody>
+<tr><td>Vac sensor (ADC)</td><td class="dash">—</td><td>CN7-34</td><td>PA0 (ADC1_IN5)</td><td class="dash">A3</td><td class="dash">—</td></tr>
+<tr><td>Pump relay (active-low)</td><td class="dash">—</td><td>CN7-36</td><td>PC3</td><td class="dash">A4</td><td class="dash">—</td></tr>
+<tr><td>Alarm relay (active-low)</td><td class="dash">—</td><td>CN7-38</td><td>PC2</td><td class="dash">A5</td><td class="dash">—</td></tr>
+<tr><td>Heartbeat LED</td><td class="dash">—</td><td>onboard LD2</td><td>PB0 (green)</td><td class="dash">—</td><td class="dash">—</td></tr>
+<tr><td>Encoder A</td><td class="dash">—</td><td>CN10-33</td><td>PC6</td><td class="dash">D2</td><td class="dash">—</td></tr>
+<tr><td>Encoder B</td><td class="dash">—</td><td>CN10-31</td><td>PA10</td><td class="dash">D3</td><td class="dash">—</td></tr>
+<tr><td>Encoder switch</td><td class="dash">—</td><td>CN10-29</td><td>PC10</td><td class="dash">D4</td><td class="dash">—</td></tr>
+<tr class="lcd"><td>LCD SCLK</td><td class="silk">SCL</td><td>CN10-11</td><td>PA5</td><td class="dash">D13</td><td><span class="wire"><span class="sw" style="background:#ffffff"></span>Wht</span></td></tr>
+<tr class="lcd"><td>LCD MOSI (Din)</td><td class="silk">SDA</td><td>CN10-15</td><td>PA7</td><td class="dash">D11</td><td><span class="wire"><span class="sw" style="background:#f2c200"></span>Yel</span></td></tr>
+<tr class="lcd"><td>LCD CS</td><td class="silk">CS</td><td>CN10-17</td><td>PA4</td><td class="dash">D10</td><td><span class="wire"><span class="sw" style="background:#2f6fdb"></span>Blu</span></td></tr>
+<tr class="lcd"><td>LCD DC</td><td class="silk">DC</td><td>CN10-19</td><td>PA9</td><td class="dash">D9</td><td><span class="wire"><span class="sw" style="background:#2ea043"></span>Grn</span></td></tr>
+<tr class="lcd"><td>LCD RST</td><td class="silk">RES</td><td>CN10-21</td><td>PC12</td><td class="dash">D8</td><td><span class="wire"><span class="sw" style="background:#e8730c"></span>Org</span></td></tr>
+<tr class="lcd"><td>LCD backlight</td><td class="silk">BLK</td><td>CN7-32</td><td>PA1</td><td class="dash">A2</td><td><span class="wire"><span class="sw" style="background:#8250df"></span>Pur</span></td></tr>
+<tr class="lcd"><td>LCD VCC</td><td class="silk">VCC</td><td>CN7-16</td><td><strong>3V3</strong></td><td class="dash">—</td><td><span class="wire"><span class="sw" style="background:#d1242f"></span>Red</span></td></tr>
+<tr class="lcd"><td>LCD GND</td><td class="silk">GND</td><td>CN7-20</td><td>GND</td><td class="dash">—</td><td><span class="wire"><span class="sw" style="background:#24292f"></span>Blk</span></td></tr>
+<tr><td>Sensor Vs (supply)</td><td class="dash">—</td><td>CN7-18</td><td><strong>5V</strong></td><td class="dash">—</td><td class="dash">—</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout">
+<p><strong>Using the ST Morpho headers — read this.</strong> The Morpho connectors (CN7, CN10) bring out <em>every</em> MCU pin, so they're less foolproof than the Arduino header. Electrically it's the <em>same pin</em> either way — nothing in the firmware/overlay changes — but physically:</p>
+<p>&bull; <strong>Count carefully.</strong> Each connector is 2&times;19 = 38 pins: odd column (1,3,5&hellip;) one side, even (2,4,6&hellip;) the other. Pin&nbsp;1 is silk-marked. Analog + power (A0&ndash;A5, 5&nbsp;V, 3V3) are on <strong>CN7</strong>; digital D0&ndash;D15 are on <strong>CN10</strong>.</p>
+<p>&bull; <strong>Avoid the debug/system pins</strong> the Arduino header hid: <code>PA13/PA14</code> (SWD), <code>NRST</code>, <code>PH3/BOOT0</code> &mdash; wiring to these can break flashing. And <strong>leave <code>PA2/PA3</code></strong> (CN10-35/37, D1/D0) alone &mdash; they're the ST-LINK console VCP.</p>
+<p>&bull; <strong>Solder-bridge-shared pads:</strong> <code>PA7</code> (CN10-15, shares w/ PA10), <code>PA4</code> (CN10-17, shares w/ PB10), <code>PA1</code> (CN7-32, shares w/ PB6). The board defaults to the pin we use &mdash; <strong>don't move the solder bridges.</strong></p>
+</div>
+
+<div class="callout">
+<p><strong>Power the LCD from 3V3, not 5V.</strong> The module's VCC must match the 3.3 V signal level — a 5 V-powered panel driven by 3.3 V logic typically shows blank/garbled.</p>
+<p><strong>No MISO.</strong> The panel is write-only (only <code>SDA</code> data-in), so the SPI bus is SCK + MOSI only and CS is a GPIO.</p>
+<p><strong>BLK is active-high, on by default</strong> (internal pull-up to 3.3 V). Firmware drives PA1 high to enable it; grounding BLK suspends the backlight.</p>
+</div>
+
+<h2>Vacuum sensor front-end (analog)</h2>
+<p>NXP <strong>MPXV4115V</strong> (5 V ratiometric part) → resistor divider → the 3.3 V ADC.
+The divider both scales the 0.2–4.6 V output into range and <strong>protects the ADC pin</strong>
+(never wire the raw sensor output to the MCU).</p>
+
+<div class="table-scroll">
+<table>
+<thead><tr><th>Node</th><th>Connect to</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Sensor <strong>Vs</strong> (supply)</td><td>Nucleo <strong>5V</strong> (CN7-18)</td><td>MPXV4115V needs ~5 V; output is ratiometric to it</td></tr>
+<tr><td>Sensor <strong>GND</strong></td><td>GND (CN7-20)</td><td></td></tr>
+<tr><td>Sensor <strong>Vout</strong> → node <code>Vac_Sensor</code></td><td>top of R1; C1 &amp; C3 to GND</td><td>0.2–4.6 V raw</td></tr>
+<tr><td><strong>C1</strong> 10 µF, <strong>C3</strong> 100 pF</td><td><code>Vac_Sensor</code> → GND</td><td>supply/noise filtering on the sensor node</td></tr>
+<tr><td><strong>R1</strong> 5 kΩ</td><td><code>Vac_Sensor</code> → <code>Vacuum_Sig</code></td><td>divider top</td></tr>
+<tr><td><strong>R2</strong> 10 kΩ</td><td><code>Vacuum_Sig</code> → GND</td><td>divider bottom</td></tr>
+<tr><td><code>Vacuum_Sig</code> (tap)</td><td><strong>CN7-34 / PA0</strong> (ADC1_IN5)</td><td>0.13–3.07 V into the ADC</td></tr>
+</tbody>
+</table>
+</div>
+
+<pre style="background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.82rem;line-height:1.45;">
+  MPXV4115V Vout
+  (0.2..4.6V)
+       │  Vac_Sensor
+       ├──────────────┬───────────────┐
+       │              │               │
+      ─┴─ C1         ─┴─ C3          [R1] 5k
+      10uF          100pF             │
+       │              │               ├──────►  Vacuum_Sig ──►  CN7-34 / PA0
+      GND            GND            [R2] 10k     (0.13..3.07V)
+                                      │
+                                     GND
+</pre>
+
+<div class="callout">
+<p><strong>Divider math:</strong> ratio = 10k/(5k+10k) = 0.667 → max 4.6 V × 0.667 = <strong>3.07 V</strong> (93% of the 3.3 V full scale, safely under the 3.6 V pin max). Source impedance = 5k∥10k = <strong>3.3 kΩ</strong>, handled by the 47.5-cycle ADC sample time in the overlay.</p>
+<p><strong>Calibration:</strong> the firmware's raw→inHg map still uses the ESP32's 4090 full scale — retune to the real min/max counts on the WB55 (~3810 at 3.07 V). See the <code>TODO(calibrate…)</code> in <code>src/main.c</code>.</p>
+</div>
+
+<h2>Notes</h2>
+<ul>
+<li>Encoder A/B/SW use internal pull-ups — idle high, each switches to GND.</li>
+<li>Relays are active-low (matches the firmware's <code>On = 0</code> convention).</li>
+<li>Console + flashing share the single ST-LINK USB (USART1 VCP) — no wiring needed.</li>
+</ul>
+
+</div>
+</body>
+</html>

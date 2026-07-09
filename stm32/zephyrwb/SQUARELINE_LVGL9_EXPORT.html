@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Re-exporting the SquareLine UI for LVGL 9.5</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --border: #d0d7de;
+    --code-bg: #f6f8fa; --accent: #0969da; --th-bg: #f6f8fa;
+    --warn-bg: #fff8c5; --warn-border: #d4a72c; --ok-bg: #dafbe1; --ok-border: #2da44e;
+    --step-bg: #ddf4ff; --step-border: #54aeff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --code-bg: #161b22; --accent: #4493f8; --th-bg: #161b22;
+      --warn-bg: #2d2200; --warn-border: #bb8009; --ok-bg: #0f2417; --ok-border: #2ea043;
+      --step-bg: #0b2942; --step-border: #1f6feb;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
+  h1 { font-size: 1.85rem; line-height: 1.25; margin: 0 0 4px; }
+  h1 .sub { display: block; font-size: 1.02rem; font-weight: 400; color: var(--muted); margin-top: 8px; }
+  h2 {
+    font-size: 1.35rem; margin: 38px 0 14px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  h2 .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.7em; height: 1.7em; margin-right: 10px; border-radius: 50%;
+    background: var(--step-bg); border: 1px solid var(--step-border);
+    font-size: 0.8em; font-weight: 700;
+  }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em; background: var(--code-bg); padding: 0.15em 0.4em;
+    border-radius: 6px; border: 1px solid var(--border);
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; margin: 14px 0;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: 0.82rem; line-height: 1.5; }
+  .table-scroll { overflow-x: auto; margin: 16px 0; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--th-bg); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  ul, ol { padding-left: 24px; margin: 10px 0; }
+  li { margin: 6px 0; }
+  ol.steps > li { margin: 10px 0; }
+  blockquote {
+    margin: 14px 0; padding: 2px 16px; color: var(--muted);
+    border-left: 4px solid var(--border);
+  }
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 16px 0; border: 1px solid; }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .ok { background: var(--ok-bg); border-color: var(--ok-border); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  .meta { color: var(--muted); font-size: 0.9rem; }
+  kbd {
+    font-family: ui-monospace, monospace; font-size: 0.82em; background: var(--code-bg);
+    border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Re-exporting the SquareLine UI for LVGL 9.5
+  <span class="sub">Step-by-step for the CNC Vacuum Pump Controller — written for first-time SquareLine users</span>
+</h1>
+<p class="meta">The firmware ships a placeholder UI because the existing export (<code>source/Vac_Gauge_V2/src/ui_lvgl/</code>) targets <strong>LVGL 8.3</strong> and won't compile against the <strong>LVGL 9.5</strong> in this Zephyr workspace. This regenerates it for LVGL 9 into <code>stm32/zephyrwb/src/ui/</code>.</p>
+
+<div class="callout ok">
+<p>Your project (<code>source/SquareLine_VacDisp/Sm_Disp.spj</code>) is small — <strong>one screen, 8 widgets, 1 custom font, ~7 image assets</strong> — comfortably inside SquareLine's free tier (Personal license: 10 screens / 150 widgets).</p>
+</div>
+
+<h2><span class="n">0</span>What we're producing</h2>
+<p>SquareLine exports a folder of C files (<code>ui.c</code>, <code>ui.h</code>, <code>ui_Screen1.c</code>, image <code>.c</code> files, the font, <code>ui_helpers.*</code>, <code>filelist.txt</code>). We want only <strong>those UI files</strong> — not a full template project — copied into <code>stm32/zephyrwb/src/ui/</code>.</p>
+<div class="callout warn">
+<p><strong>Name contract — do not rename these widgets:</strong> the firmware refers to <code>ui_Screen1</code>, <code>ui_GaugeFace</code>, <code>ui_Spinner1</code>, <code>ui_ledDarkImage</code>, <code>ui_ledRedImage</code>, <code>ui_Needle</code>, <code>ui_vacLabel</code>, <code>ui_redBugImg</code>, <code>ui_grnBugImg</code>, and the font <code>ui_font_courier_Bold</code>. Keep the widget names exactly as they are so the generated <code>ui_*</code> symbols still match.</p>
+</div>
+
+<h2><span class="n">1</span>Install SquareLine Studio</h2>
+<ol class="steps">
+<li>Go to <a href="https://squareline.io/">https://squareline.io/</a> → <strong>Downloads</strong>. Grab the <strong>macOS</strong> installer (Apple-Silicon build for your M-series Mac).</li>
+<li>Open the <code>.dmg</code> and drag <strong>SquareLine Studio</strong> to Applications. First launch: right-click → <strong>Open</strong> (clears the Gatekeeper warning for an unsigned app).</li>
+<li><strong>Create a free account</strong> and sign in inside the app (login is required even for the free tier).</li>
+<li>Choose the <strong>Personal</strong> license — free, non-commercial, limited to <strong>10 screens / 150 widgets</strong>. This project uses 1 / 8, so it fits. (A 30-day <strong>Trial</strong> unlocks Business features, but you don't need them.)</li>
+</ol>
+<p>No other tools to install — SquareLine bundles its own font/image converters, and you do <strong>not</strong> need the LVGL source (we don't use SquareLine's compiler).</p>
+
+<h2><span class="n">2</span>Back up, then open the project</h2>
+<ol class="steps">
+<li><strong>Back up first</strong> — the upgrade edits the project in place:
+<pre><code>cp -R source/SquareLine_VacDisp source/SquareLine_VacDisp.lvgl8.bak</code></pre></li>
+<li>In SquareLine: <strong>File → Open Project…</strong> → select <code>source/SquareLine_VacDisp/Sm_Disp.spj</code>. It opens as an <strong>LVGL 8.3.11</strong> project (board "Arduino with TFT_eSPI", 240×240).</li>
+</ol>
+<p>You'll see the round gauge on the canvas, a <strong>Screens/Widgets</strong> tree on the left, an <strong>Inspector</strong> on the right, and an <strong>Assets</strong> panel (fonts + images).</p>
+
+<h2><span class="n">3</span>Prepare for LVGL 9 <em>(before switching the version)</em></h2>
+<p>LVGL 9 dropped/renamed things SquareLine-8 projects rely on. Fix these first:</p>
+<ol class="steps">
+<li><strong>Fonts.</strong> <strong>Assets</strong> panel → <strong>Fonts</strong> → select <code>ui_font_courier_Bold</code> → <strong>Modify</strong>. Ensure <strong>Bpp</strong> is <strong>4 bit</strong> or lower (LVGL 9 removed 8-bpp fonts), then <strong>Modify/Update</strong>. This regenerates the font with the LVGL-9-compatible version macro.</li>
+<li><strong>Animation Time.</strong> Select each widget and, in the Inspector, <strong>uncheck "Animation Time"</strong> wherever it appears (notably on <code>ui_Spinner1</code>). A left-over value can crash LVGL 9. (The spinner still spins; only the checkbox is the issue.)</li>
+<li><strong>Color format.</strong> <strong>Project Settings</strong> (gear icon / <strong>File → Project Settings</strong>) → <strong>Display</strong>. If <strong>Color depth</strong> is <strong>16-bit swap</strong>, change it to plain <strong>16-bit</strong> — Zephyr's driver handles byte order, and a swapped format gives wrong colors. Leave resolution <strong>240 × 240</strong>.</li>
+</ol>
+
+<h2><span class="n">4</span>Get onto LVGL 9 — the version is locked to the board template</h2>
+<div class="callout warn">
+<p><strong>The LVGL version is bound to the board/UI-kit template, not a free dropdown.</strong> This project's board is <strong>"Arduino with TFT_eSPI"</strong>, an <strong>LVGL-8.3-only</strong> template — so its version list only shows <strong>8.3.11</strong> and there's no way to pick 9.x for it. (If new projects <em>also</em> only show 8.3, your SquareLine Studio is too old — you need <strong>≥ v1.4.1</strong> for LVGL 9; check <strong>Help → About</strong> and update from squareline.io.)</p>
+</div>
+<p>You get LVGL 9 one of two ways:</p>
+<ul>
+<li><strong>Recommended — create a fresh LVGL-9 project (see <a href="#fallback">§8</a>).</strong> At <strong>File → Create → New Project</strong>, choose a template that offers <strong>LVGL 9.x</strong> (a <strong>Desktop</strong> / generic project is simplest and LVGL-9-capable — confirm the <strong>LVGL version</strong> selector shows 9.x before creating), set <strong>240 × 240 / 16-bit</strong>, then rebuild the 8 widgets. Reliable, and ~15 min for this 1-screen UI.</li>
+<li><strong>If available — swap the board template in place.</strong> Some SquareLine versions let you change an existing project's <strong>Board/template</strong> to an LVGL-9 board in <strong>Project Settings</strong>, after which the version follows to 9.x and your layout is preserved. The option is version-dependent and often missing — if you don't see it, use the fresh-project route.</li>
+</ul>
+<p>Any <strong>9.x</strong> export is source-compatible with the <strong>9.5</strong> runtime; SquareLine doesn't list 9.5 specifically. Once on a 9.x project, <strong>Save</strong> (<kbd>⌘</kbd>+<kbd>S</kbd>).</p>
+
+<h2><span class="n">5</span>Set the export path and options</h2>
+<ol class="steps">
+<li><strong>Project Settings → File export:</strong>
+  <ul>
+  <li><strong>UI Files Export Path</strong> → <code>…/CNC_Vac_Pump/stm32/zephyrwb/src/ui</code> (create the <code>ui</code> folder if needed; or export elsewhere and copy in — step 6).</li>
+  <li><strong>Object naming</strong>: leave the <strong>default</strong> (produces <code>ui_&lt;WidgetName&gt;</code>, e.g. <code>ui_Needle</code>). Do <strong>not</strong> switch to <code>[Screen]_Name</code> — that renames symbols and breaks the firmware contract.</li>
+  <li><strong>Flat export</strong>: optional. The Zephyr build globs <code>src/ui/**.c</code> recursively, so either layout works.</li>
+  </ul>
+</li>
+<li><strong>Export → Export UI Files</strong>. Do <strong>not</strong> use "Create Template Project" — that dumps an Arduino/PlatformIO scaffold we don't want.</li>
+</ol>
+<p>You should now have <code>ui.c</code>, <code>ui.h</code>, <code>ui_Screen1.c</code>, the <code>ui_img_*.c</code> files, <code>ui_font_courier_Bold.c</code>, <code>ui_helpers.*</code>, and <code>filelist.txt</code> in <code>stm32/zephyrwb/src/ui/</code>.</p>
+
+<h2><span class="n">6</span>Wire it into the Zephyr build</h2>
+<ol class="steps">
+<li>If you exported outside the repo, copy the files in:
+<pre><code>mkdir -p stm32/zephyrwb/src/ui &amp;&amp; cp -R ~/SquareLineExport/* stm32/zephyrwb/src/ui/</code></pre></li>
+<li>Uncomment the two lines in <code>CMakeLists.txt</code>:
+<pre><code>file(GLOB_RECURSE UI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/*.c)
+target_sources(app PRIVATE ${UI_SOURCES})</code></pre></li>
+<li>In <code>src/main.c</code>: <code>#include "ui/ui.h"</code>, replace <code>ui_placeholder()</code> with <code>ui_init()</code>, and replace the placeholder <code>ui_update()</code> body with the real <code>ui_*</code> widget calls.</li>
+</ol>
+<div class="callout ok">
+<p><strong>Hand this last part to me.</strong> Once the files are in <code>src/ui/</code>, tell me and I'll write the <code>main.c</code> integration against the real generated headers — that's where the 8.3→9 API renames (below) actually bite.</p>
+</div>
+
+<h2><span class="n">7</span>LVGL 8.3 → 9 API changes you'll see</h2>
+<div class="table-scroll">
+<table>
+<thead><tr><th>Purpose</th><th>LVGL 8.3 (old firmware)</th><th>LVGL 9</th></tr></thead>
+<tbody>
+<tr><td>Rotate needle/bug image</td><td><code>lv_img_set_angle(obj, a)</code></td><td><code>lv_image_set_rotation(obj, a)</code></td></tr>
+<tr><td>Set label text</td><td><code>lv_label_set_text(obj, s)</code></td><td><em>(unchanged)</em></td></tr>
+<tr><td>Show/hide the red LED</td><td><code>lv_obj_clear_flag(o, LV_OBJ_FLAG_HIDDEN)</code></td><td><code>lv_obj_remove_flag(o, LV_OBJ_FLAG_HIDDEN)</code></td></tr>
+<tr><td>Event target (only if you add events)</td><td><code>e-&gt;target</code></td><td><code>lv_event_get_target(e)</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>Your <code>ui_events.h</code> was empty (no custom events), so the <code>e-&gt;target</code> change won't bite. <code>lv_conf.h</code> is irrelevant here — Zephyr configures LVGL via <code>CONFIG_LV_*</code>.</p>
+
+<h2 id="fallback"><span class="n">8</span>Fallback: build a fresh LVGL 9 project</h2>
+<p>If §4's conversion corrupts the project, recreating this small UI is straightforward:</p>
+<ol class="steps">
+<li><strong>File → Create → New Project.</strong> Board: any (e.g. "Arduino with TFT_eSPI" again — the board only affects the template we ignore). Set <strong>LVGL version = 9.x</strong>, <strong>Resolution 240 × 240</strong>, <strong>Color depth 16-bit</strong> (not swap).</li>
+<li>Recreate the widgets with the <strong>exact same names</strong> (see §0):
+  <ul>
+  <li>Add an <strong>Image</strong> widget for <code>GaugeFace</code>, <code>Needle</code>, <code>ledDarkImage</code>, <code>ledRedImage</code>, <code>redBugImg</code>, <code>grnBugImg</code>; a <strong>Label</strong> <code>vacLabel</code>; a <strong>Spinner</strong> <code>Spinner1</code>.</li>
+  <li>Import the PNGs from <code>source/SquareLine_VacDisp/assets/</code> via <strong>Assets → Images → Add</strong> and assign each to its image widget.</li>
+  <li>Import the font (<code>assets/Courier_BOLD.ttf</code>) and set it on <code>vacLabel</code>.</li>
+  <li>Match positions/alignment to the originals (all centered; needle/bugs are rotated at runtime by the firmware, so their static angle is 0).</li>
+  </ul>
+</li>
+<li>Set the <strong>UI Files Export Path</strong> (§5) and <strong>Export → Export UI Files</strong>.</li>
+</ol>
+<p>For a 1-screen UI this takes ~15 minutes and avoids all conversion quirks.</p>
+
+<hr>
+<h2>Sources</h2>
+<ul>
+<li><a href="https://forum.squareline.io/t/how-to-update-a-project-from-lvgl-8-x-to-9-x/6035">SquareLine: update a project from LVGL 8.x to 9.x (forum)</a></li>
+<li><a href="https://forum.squareline.io/t/update-upgrade-project-lvgl-major-version/3858">SquareLine: upgrade project LVGL major version (forum)</a></li>
+<li><a href="https://docs.squareline.io/docs/dev_env/project_settings/">SquareLine Project Settings docs</a></li>
+<li><a href="https://docs.squareline.io/docs/introduction/licences/">SquareLine Licenses (free Personal tier: 10 screens / 150 widgets)</a></li>
+</ul>
+
+</div>
+</body>
+</html>

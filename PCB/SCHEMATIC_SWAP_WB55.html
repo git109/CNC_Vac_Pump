@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KiCad Swap Kit — WeMos → P-NUCLEO-WB55</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --border: #d0d7de;
+    --code-bg: #f6f8fa; --th-bg: #f6f8fa; --accent: #0969da;
+    --warn-bg: #fff8c5; --warn-border: #d4a72c;
+    --ok-bg: #dafbe1; --ok-border: #2da44e;
+    --cn10-bg: #eef4fb; --cn10-border: #9ac0ea;
+    --cn7-bg: #f3eefb; --cn7-border: #b79ae0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --border: #30363d;
+      --code-bg: #161b22; --th-bg: #161b22; --accent: #4493f8;
+      --warn-bg: #2d2200; --warn-border: #bb8009;
+      --ok-bg: #0f2417; --ok-border: #2ea043;
+      --cn10-bg: #10233b; --cn10-border: #1f4b7a;
+      --cn7-bg: #201533; --cn7-border: #4a2f7a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.55;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 1.55rem; margin: 0 0 4px; }
+  h1 .sub { display:block; font-size: 0.98rem; font-weight: 400; color: var(--muted); margin-top: 6px; }
+  h2 { font-size: 1.2rem; margin: 34px 0 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 1.02rem; margin: 22px 0 8px; }
+  p { margin: 10px 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em;
+    background: var(--code-bg); padding: 0.12em 0.4em; border-radius: 6px; border: 1px solid var(--border); }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; }
+  kbd { font-family: ui-monospace, monospace; font-size: 0.78em; background: var(--th-bg);
+    border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; }
+  .table-scroll { overflow-x: auto; margin: 14px 0; border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { background: var(--th-bg); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td.pin { text-align: center; font-weight: 700; font-family: ui-monospace, monospace; }
+  .cn10 caption, .cn7 caption { caption-side: top; text-align: left; padding: 8px 12px; font-weight: 600; }
+  table.cn10 { }
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 18px 0; border: 1px solid var(--warn-border); background: var(--warn-bg); }
+  .callout.ok { border-color: var(--ok-border); background: var(--ok-bg); }
+  .callout p { margin: 6px 0; }
+  ul, ol { padding-left: 24px; } li { margin: 6px 0; }
+  .net { font-family: ui-monospace, monospace; font-weight: 700; }
+  .tag { display:inline-block; font-size:0.72rem; font-weight:700; padding:1px 7px; border-radius:20px; vertical-align:middle; }
+  .tag.cn10 { background: var(--cn10-bg); border:1px solid var(--cn10-border); }
+  .tag.cn7  { background: var(--cn7-bg);  border:1px solid var(--cn7-border); }
+  .legend { color: var(--muted); font-size: 0.9rem; }
+  .step-num { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>KiCad schematic swap kit
+  <span class="sub">WeMos&nbsp;D1&nbsp;Mini32 (ESP32) &rarr; P-NUCLEO-WB55 on the ST&nbsp;Morpho headers &middot; KiCad&nbsp;10.0.4 &middot; total-beginner steps</span>
+</h1>
+
+<p><strong>Goal:</strong> replace the ESP32 (<code>WeMos_D1_Mini32</code>) symbol in
+<code>Vac_Pump_Controller.kicad_sch</code> with the STM32 <strong>P-NUCLEO-WB55</strong>,
+wired to its <strong>ST&nbsp;Morpho</strong> headers (CN7&nbsp;/&nbsp;CN10). The peripheral
+subcircuits &mdash; LCD, relays, encoder, and the R1/R2/C1/C3 vacuum-sensor divider &mdash;
+are <strong>correct as-is and are not touched</strong>. Schematic-only; the PCB file is empty.</p>
+
+<div class="callout ok">
+<p><strong>Why two connectors, not a board symbol?</strong> Your custom parts (WeMos, relay
+module, LCD) live <em>embedded inside the schematic file</em> &mdash; there's no separate
+symbol-library to extend. Rather than hand-build a Nucleo symbol (a lot for a first task) or
+hand-edit the 12,000-line schematic text (risky), we represent the dev board the honest way:
+as its <strong>two Morpho connectors</strong>, using KiCad's <strong>built-in</strong> generic
+connector. Nothing to install, and it mirrors how you physically wire it.</p>
+</div>
+
+<h2>How the connection works (read once)</h2>
+<p>The schematic is a <strong>single flat sheet</strong> that connects things by
+<strong>net-label name</strong>, not by long wires. Every peripheral already carries its labels
+&mdash; the LCD chip-select wire says <span class="net">LCD_CS</span>, the encoder says
+<span class="net">ENC_ChanA</span>, the divider tap says <span class="net">Vacuum_Sig</span>.
+<strong>Two points with the same label name are the same net.</strong> So the whole job is:
+put a label with the <em>matching name</em> on the correct Morpho pin. You do <strong>not</strong>
+route wires across to the peripherals &mdash; the name joins them.</p>
+
+<h2>The swap map (the whole spec)</h2>
+<p class="legend">Place a short wire off each pin, then attach a <strong>net label</strong> with the
+<strong>exact</strong> name (case-sensitive). GND rows use a GND power symbol instead.</p>
+
+<div class="table-scroll">
+<table class="cn10">
+<caption><span class="tag cn10">CN10</span> &nbsp;digital header &mdash; place a <code>Conn_02x19_Odd_Even</code>, name it <strong>CN10</strong></caption>
+<thead><tr><th>Morpho pin</th><th>MCU pin</th><th>Net label</th><th>Signal</th></tr></thead>
+<tbody>
+<tr><td class="pin">11</td><td>PA5</td><td class="net">LCD_SClk</td><td>LCD SPI clock</td></tr>
+<tr><td class="pin">15</td><td>PA7</td><td class="net">LCD_MOSI</td><td>LCD SPI data-in</td></tr>
+<tr><td class="pin">17</td><td>PA4</td><td class="net">LCD_CS</td><td>LCD chip-select</td></tr>
+<tr><td class="pin">19</td><td>PA9</td><td class="net">LCD_DC</td><td>LCD data/command</td></tr>
+<tr><td class="pin">21</td><td>PC12</td><td class="net">LCD_RST</td><td>LCD reset</td></tr>
+<tr><td class="pin">33</td><td>PC6</td><td class="net">ENC_ChanA</td><td>Encoder A</td></tr>
+<tr><td class="pin">31</td><td>PA10</td><td class="net">ENC_ChanB</td><td>Encoder B</td></tr>
+<tr><td class="pin">29</td><td>PC10</td><td class="net">ENC_PB</td><td>Encoder push-button</td></tr>
+<tr><td class="pin">20</td><td>GND</td><td><em>GND power symbol</em></td><td>Ground</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="table-scroll">
+<table class="cn7">
+<caption><span class="tag cn7">CN7</span> &nbsp;analog + power header &mdash; place a second <code>Conn_02x19_Odd_Even</code>, name it <strong>CN7</strong></caption>
+<thead><tr><th>Morpho pin</th><th>MCU pin</th><th>Net label</th><th>Signal</th></tr></thead>
+<tbody>
+<tr><td class="pin">34</td><td>PA0</td><td class="net">Vacuum_Sig</td><td>Divider tap &rarr; ADC (ADC1_IN5)</td></tr>
+<tr><td class="pin">36</td><td>PC3</td><td class="net">Vac_Pump</td><td>Pump-relay control</td></tr>
+<tr><td class="pin">38</td><td>PC2</td><td class="net">Alarm</td><td>Alarm-relay control</td></tr>
+<tr><td class="pin">32</td><td>PA1</td><td class="net">LCD_BackLt</td><td>LCD backlight enable</td></tr>
+<tr><td class="pin">16</td><td>3V3</td><td class="net">LCD_Vcc</td><td>3.3&nbsp;V rail &rarr; LCD VCC</td></tr>
+<tr><td class="pin">18</td><td>5V (E5V)</td><td class="net">5Vdc</td><td>5&nbsp;V rail (see power caution)</td></tr>
+<tr><td class="pin">20</td><td>GND</td><td><em>GND power symbol</em></td><td>Ground</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout">
+<p><strong>Two nets intentionally change:</strong></p>
+<p>&bull; <span class="net">LCD_MISO</span> is <strong>dropped</strong> &mdash; write-only panel, no MCU MISO.
+Leave the LCD symbol's MISO pin unconnected (No-Connect flag, step&nbsp;7) and delete any leftover floating <span class="net">LCD_MISO</span> label.</p>
+<p>&bull; The MCU connects to <span class="net">Vacuum_Sig</span> (the <em>divided</em> tap), never to the raw
+<span class="net">Vac_Sensor</span> node. Nothing to do &mdash; just don't wire <span class="net">Vac_Sensor</span> to the board.</p>
+</div>
+
+<h2>Step-by-step in KiCad&nbsp;10</h2>
+
+<h3><span class="step-num">0.</span> Back up first</h3>
+<pre><code>cd /Users/robert/Documents/shop-dev/shop-tools/CNC_Vac_Pump
+git add -A &amp;&amp; git commit -m "snapshot before WB55 schematic swap"</code></pre>
+<p>(Or copy the <code>PCB/Vac_Pump_Controller/</code> folder in Finder.) You can always
+<code>git restore</code> to undo.</p>
+
+<h3><span class="step-num">1.</span> Open the schematic</h3>
+<p><strong>File &rarr; Open Project…</strong> &rarr; <code>Vac_Pump_Controller.kicad_pro</code>, then
+double-click <strong>Vac_Pump_Controller.kicad_sch</strong>.
+Navigation: scroll = zoom, middle-drag = pan, <kbd>Esc</kbd> = cancel tool,
+<kbd>Ctrl</kbd>+<kbd>Z</kbd> = undo, <kbd>Home</kbd> = zoom-to-fit. KiCad hotkeys act on
+whatever the cursor is hovering.</p>
+
+<h3><span class="step-num">2.</span> Delete the old ESP32 symbol</h3>
+<p>Find the <strong>WeMos&nbsp;D1&nbsp;Mini32</strong> block (pins named <code>IO27</code>,
+<code>IO25</code>, <code>Txd</code>&hellip;). Click its body, press <kbd>Delete</kbd>. The
+surrounding net labels can stay &mdash; we reuse those names. Delete any now-dangling wire
+stubs if you like (optional).</p>
+
+<h3><span class="step-num">3.</span> Place the two Morpho connectors</h3>
+<p>Press <kbd>A</kbd> (Add Symbol), search <code>Conn_02x19_Odd_Even</code> (library
+<em>Connector_Generic</em>), place it; press <kbd>A</kbd> again for the second. These are
+2&times;19 = 38-pin parts &mdash; <strong>pin numbers 1&ndash;38 match the Morpho pin numbers exactly</strong>
+(odd 1,3,&hellip;37 one column; even 2,4,&hellip;38 the other).</p>
+
+<h3><span class="step-num">4.</span> Name them</h3>
+<p>Hover a connector, press <kbd>E</kbd> &rarr; Reference <code>CN10</code>, Value
+<code>ST_Morpho_CN10</code>. Second one &rarr; <code>CN7</code> / <code>ST_Morpho_CN7</code>.
+Ignore any "no footprint" note &mdash; there's no PCB.</p>
+
+<h3><span class="step-num">5.</span> Wire stub on each used pin</h3>
+<p>For every table row: press <kbd>W</kbd>, click the connector <strong>pin endpoint</strong>
+(circle at the pin tip), drag ~2 squares into open space, click, <kbd>Esc</kbd>. Zoom in so
+you hit the exact pin number.</p>
+
+<h3><span class="step-num">6.</span> Attach the net labels</h3>
+<p>For every row except GND: hover the wire's free end, press <kbd>L</kbd>, type the
+<strong>exact</strong> name, place it, <kbd>Esc</kbd>. Copy capitalization verbatim:
+<span class="net">LCD_SClk</span>, <span class="net">ENC_ChanA</span>,
+<span class="net">Vacuum_Sig</span>, <span class="net">LCD_BackLt</span>,
+<span class="net">Vac_Pump</span>, <span class="net">LCD_Vcc</span>, <span class="net">5Vdc</span>.
+A typo makes a new disconnected net &mdash; ERC (step&nbsp;9) will flag it.</p>
+
+<h3><span class="step-num">7.</span> Handle the dropped MISO</h3>
+<p>On the <strong>LCD module</strong> symbol, hover its <strong>MISO</strong> pin and press
+<kbd>Q</kbd> to drop a No-Connect (&times;) flag. Delete any leftover floating
+<span class="net">LCD_MISO</span> label.</p>
+
+<h3><span class="step-num">8.</span> Ground &amp; power</h3>
+<p>Press <kbd>P</kbd> (Add Power Symbol), search <code>GND</code>, place on a stub off
+<strong>CN7-20</strong> and again off <strong>CN10-20</strong> (all GND symbols share the
+<code>GND</code> net). <span class="net">LCD_Vcc</span> on CN7-16 is the 3.3&nbsp;V LCD feed;
+<span class="net">5Vdc</span> on CN7-18 is the 5&nbsp;V rail (see caution).</p>
+
+<h3><span class="step-num">9.</span> Run ERC (your safety net)</h3>
+<p><strong>Inspect &rarr; Electrical Rules Checker &rarr; Run.</strong></p>
+<ul>
+<li><strong>Expected, harmless:</strong> ~60 "Pin not connected" warnings on the <em>unused</em>
+connector pins (we wire ~17 of the two connectors' 76) &mdash; normal for a dev-board-as-module. Ignore, or <kbd>Q</kbd> them for a clean report.</li>
+<li><strong>Must fix:</strong> any warning naming <em>one of our nets</em> (LCD/encoder/relay/ADC) &mdash;
+that's a name typo or a label off the wire end. Correct the spelling/placement.</li>
+</ul>
+
+<h3><span class="step-num">10.</span> Save &amp; optional PDF</h3>
+<p><kbd>Ctrl</kbd>+<kbd>S</kbd>. Then <strong>File &rarr; Plot…</strong> &rarr; PDF to eyeball the
+sheet. (Or ask me to run <code>kicad-cli sch erc</code> / <code>export pdf</code> on the saved file.)</p>
+
+<h2>Cautions</h2>
+<p><strong>Schematic</strong></p>
+<ul>
+<li><strong>Label names are exact &amp; case-sensitive</strong> &mdash; the #1 mistake. Match the tables character-for-character.</li>
+<li><strong>Connector pin number = Morpho pin number.</strong> Go by the printed number (1&ndash;38), not screen position.</li>
+<li><span class="net">LCD_MISO</span> is deliberately gone (write-only panel). No-Connect it.</li>
+<li>Unused connector-pin warnings are expected &mdash; don't chase them.</li>
+</ul>
+<p><strong>Hardware / power</strong></p>
+<ul>
+<li><strong>Field power:</strong> the external <strong>HS-40005 AC/DC</strong> supply's
+<span class="net">5Vdc</span> feeds the Nucleo <strong>5V (E5V) pin, CN7-18</strong> &mdash; which
+requires setting the board power-source jumper to <strong>E5V</strong> (UM2435 &sect;6.4). On the bench,
+<strong>ST-LINK USB</strong> powers it instead; don't drive external 5&nbsp;V into CN7-18 <em>and</em> USB
+at once unless the jumper is right, or you back-feed the ST-LINK.</li>
+<li><strong>3.3&nbsp;V</strong> is the Nucleo's on-board regulator (<span class="net">LCD_Vcc</span>, CN7-16).
+Power the GC9A01 from this, never 5&nbsp;V.</li>
+<li><strong>Avoid the Morpho-only pins</strong> the Arduino header hid: <code>PA13/PA14</code> (SWD),
+<code>NRST</code>, <code>PH3/BOOT0</code>, and console <code>PA2/PA3</code> (D0/D1).</li>
+<li><strong>Solder-bridge-shared pads</strong> (<code>PA7</code>=CN10-15, <code>PA4</code>=CN10-17,
+<code>PA1</code>=CN7-32) &mdash; board defaults to the pin we use; leave the bridges alone.</li>
+</ul>
+<p><strong>PCB</strong> &mdash; the <code>.kicad_pcb</code> is empty; this is schematic-only. If you ever lay out a
+board, assign footprints to CN7/CN10 first.</p>
+
+<div class="callout">
+<p><strong>Want me to do it instead?</strong> I can edit the <code>.kicad_sch</code> directly and
+<strong>validate with <code>kicad-cli sch erc</code></strong> before handing it back. Trade-off: I can't
+<em>see</em> the result, so placement may be visually messy even when electrically correct. Say the word
+and I'll produce a validated draft for you to open and tidy.</p>
+</div>
+
+</div>
+</body>
+</html>

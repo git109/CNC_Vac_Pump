@@ -1,0 +1,10 @@
+# CNC Vacuum Pump Controller — application options
+
+config VAC_SIM
+	bool "Simulate the vacuum sensor (no ADC hardware needed)"
+	help
+	  Feed a synthetic triangle-wave vacuum value into the control loop instead
+	  of sampling the ADC, so the display, needle, setpoint bugs, and pump-relay
+	  logic can be exercised before the analog sensor is wired.
+
+source "Kconfig.zephyr"
