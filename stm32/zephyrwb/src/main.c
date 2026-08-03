@@ -85,12 +85,21 @@ static void vac_work_handler(struct k_work *w)
 
 	g_vac_raw = filt;
 
-	/* map(filt, 0, 4090, 300, 0) -> inHg*10
-	 * TODO(calibrate for STM32): the 4090 full-scale came from the ESP32. On the
-	 * WB55 (12-bit, 3.3 V VREF+) the MPXV4115V + 5k/10k divider tops out near
-	 * ~3810 counts (3.07 V), so retune the map endpoints to the real min/max
-	 * readings once the sensor is wired. */
-	int vac_val = (300 * (4090 - (int)filt)) / 4090;
+	/* Two-point calibration (measured 2026-08-02) against the shop vacuum gauge on
+	 * the VB2200 manifold. filt (ADC counts) -> vacuum in inHg*10, linear:
+	 *   atmosphere   filt=4044 -> 0.0 inHg
+	 *   full vacuum  filt=709  -> 29.0 inHg   (sealed line, reference gauge = 29")
+	 * vac(inHg*10) = 290 * (4044 - filt) / (4044 - 709). Both endpoints are real
+	 * measurements, so the divider ratio and VREF drop out. Clamp 0..300. */
+	const int cnt_atm = 4044;   /* counts at atmosphere  -> 0.0 inHg  */
+	const int cnt_ref = 709;    /* counts at full vacuum -> 29.0 inHg */
+	const int ref_x10 = 290;    /* 29.0 inHg (inHg * 10)              */
+	int vac_val = (ref_x10 * (cnt_atm - (int)filt)) / (cnt_atm - cnt_ref);
+	if (vac_val < 0) {
+		vac_val = 0;
+	} else if (vac_val > 300) {
+		vac_val = 300;
+	}
 	g_vac_val = vac_val;
 
 	if (vac_val <= app_red) {
@@ -123,8 +132,11 @@ static void ui_update(void)
 	snprintf(buf, sizeof(buf), "%d.%d", v / 10, av % 10);
 	lv_label_set_text(ui_vacLabel, buf);
 
-	/* Needle: map raw sensor 0..4096 -> 0..270.0 deg. */
-	lv_image_set_rotation(ui_Needle, (int32_t)((long)g_vac_raw * 2700 / 4096));
+	/* Needle: calibrated vacuum (inHg*10) mapped to the gauge face. The needle
+	 * image sits 135 deg off the setpoint-bug frame, so 0 inHg -> 270.0 deg (dial
+	 * start), 15 -> 135.0 deg (center), 30 inHg -> 0 deg. Verified against the
+	 * original raw*2700/4096 mapping (atmosphere ~270 deg) + on-screen check. */
+	lv_image_set_rotation(ui_Needle, (int32_t)(2700 - 9 * v));
 
 	/* Setpoint "bugs": map inHg*10 (300..0) -> -135.0..135.0 deg. */
 	lv_image_set_rotation(ui_redBugImg, (int32_t)(1350 - 9 * app_red));

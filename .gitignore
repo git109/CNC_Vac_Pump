@@ -2,3 +2,12 @@ PCB/.DS_Store
 */.DS_Store
 .DS_Store
 .DS_Store
+
+# Editor local-history backups (VS Code Local History)
+.history/
+
+# KiCad generated reports + lock files
+*-erc.rpt
+*.lck
+~*.lck
+fp-info-cache
